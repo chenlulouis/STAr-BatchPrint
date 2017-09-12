@@ -357,6 +357,6 @@ pupeteer会下载一个特别的Chrome浏览器到你的项目中，大概120MB�
 
 我们推荐使用[PostMan](https://www.getpostman.com/)这个API测试工具来向Server Post我们模拟的数据。
 
-![PostMan配置](https://leanote.com/api/file/getImage?fileId=59b7b38eab64414501002f30)
+![PostMan配置](http://1.file.leanote.top/59b7b38eab64414501002f30/1505211235570_2.png?e=1505215284&token=ym9ZIrtxjozPN4G9he3-FHPOPxAe-OQmxzol5EOk:sMWzhTlMeu0NO1eEeT4uMHI4n3Y)
 
 点击Send后，在我们Server的目录中会生成一个PDF文档。打开后就可以看到指定网页的内容。
