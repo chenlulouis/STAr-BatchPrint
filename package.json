@@ -1,0 +1,23 @@
+{
+  "name": "star-batchprint",
+  "version": "1.0.0",
+  "description": "网络打印至PDF",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhangwei8387/STAr-BatchPrint.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zhangwei8387/STAr-BatchPrint/issues"
+  },
+  "homepage": "https://github.com/zhangwei8387/STAr-BatchPrint#readme",
+  "dependencies": {
+    "puppeteer": "^0.10.2",
+    "restify": "^5.2.0"
+  }
+}
