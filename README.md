@@ -99,7 +99,7 @@ pupeteer会下载一个特别的Chrome浏览器到你的项目中，大概120MB�
 
 其中postNewPrintJob为该请求的Post回调函数。下面我们来实现它。
 
-##实现postNewPrintJob
+## 实现postNewPrintJob
 该回调函数主要处理请求的数据，以及完成生成PDF的操作。
 
     function postNewPrintJob(req, res, next) {
