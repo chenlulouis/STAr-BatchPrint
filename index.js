@@ -5,12 +5,14 @@ const restify = require('restify');
 //指定Server的IP地址和端口
 const ip_addr = '127.0.0.1'; 
 const port = '8080';
+const pdffiledirectory='pdffiles';
 
 //启动Server
 var server = restify.createServer({
   name: 'Batch-Print-Server'
 });
 
+//启动服务端监听
 server.listen(port, ip_addr, function() {
   console.log('%s listening at %s ', server.name, server.url);
 });
@@ -19,10 +21,22 @@ server.listen(port, ip_addr, function() {
 server.use(restify.plugins.queryParser());
 server.use(restify.plugins.bodyParser({ requestBodyOnGet: true }));
 
+//指定根路由返回内容
+server.get('/', function(req, res, next) {
+  res.send('Hello BatchPrint!');
+  return next();
+});
+// testing the service  
+server.get('/test', function (req, res, next) {  
+    res.send("testing...");  
+    next();  
+});
+
 //指定Route
 PATH = '/print';
 //指定相应Route的方法
 server.post({ path: PATH, version: '0.0.1' }, postNewPrintJob);
+
 
 function postNewPrintJob(req, res, next) {
   var job = {};
@@ -48,7 +62,7 @@ function postNewPrintJob(req, res, next) {
     await page.emulateMedia('print');
     //生成PDF文件，format设为A4,margin为默认页边距。
     const pdffile = await page.pdf({
-      path: job.filename,
+      path: pdffiledirectory+'/'+job.filename,
       format: 'A4',
       margin: {
         top: '10mm',
