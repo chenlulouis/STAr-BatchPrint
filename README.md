@@ -27,3 +27,5 @@ Puppeteer 是一个控制 headless Chrome 的 Node.js API 。它是一个 Node.j
  - 创建一个最新的自动测试环境。使用最新的 JavaScript 和浏览器功能，在最新版本的 Chrome 中直接运行测试
 
  - 捕获网站的时间线跟踪，以帮助诊断性能问题
+ # 项目主要功能
+ 
