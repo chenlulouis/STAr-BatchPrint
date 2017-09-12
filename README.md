@@ -278,7 +278,8 @@ pupeteer会下载一个特别的Chrome浏览器到你的项目中，大概120MB�
 
 其中postNewPrintJob为该请求的Post回调函数。下面我们来实现它。
 
-##实现postNewPrintJob
+
+## 实现postNewPrintJob
 该回调函数主要处理请求的数据，以及完成生成PDF的操作。
 
     function postNewPrintJob(req, res, next) {
@@ -355,8 +356,8 @@ pupeteer会下载一个特别的Chrome浏览器到你的项目中，大概120MB�
 
 说明这个路由并没有指定Get方法。因为我们使用Post来向服务器推送数据。
 
-我们推荐使用[PostMan](https://www.getpostman.com/)这个API测试工具来向Server Post我们模拟的数据。
+推荐使用[PostMan](https://www.getpostman.com/)这个API测试工具来向Server Post我们模拟的数据。
 
-![PostMan配置](leanote://file/getImage?fileId=59b7b363780e294072000000)
+![PostMan配置](./pdffiles/1505211235570_2.png)
 
 点击Send后，在我们Server的目录中会生成一个PDF文档。打开后就可以看到指定网页的内容。
