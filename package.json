@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/zhangwei8387/STAr-BatchPrint#readme",
   "dependencies": {
+    "eslint": "^4.6.1",
     "puppeteer": "^0.10.2",
     "restify": "^5.2.0"
   }

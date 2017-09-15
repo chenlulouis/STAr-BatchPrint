@@ -13,15 +13,17 @@ var server = restify.createServer({
 });
 
 //启动服务端监听
-server.listen(port, ip_addr, function () {
+server.listen(port, ip_addr, function() {
   console.log('%s listening at %s ', server.name, server.url);
 });
 
 //启用restify的插件
 server.use(restify.plugins.queryParser());
-server.use(restify.plugins.bodyParser({
-  requestBodyOnGet: true
-}));
+server.use(
+  restify.plugins.bodyParser({
+    requestBodyOnGet: true
+  })
+);
 // server.use(restify.pre.userAgentConnection());
 // Lets try and fix CORS support
 // By default the restify middleware doesn't do much unless you instruct
@@ -36,36 +38,39 @@ server.use(restify.plugins.bodyParser({
 // The authorization one is key for our authentication strategy
 //
 let ALLOW_HEADERS = [];
-ALLOW_HEADERS.push("authorization");
-ALLOW_HEADERS.push("withcredentials");
-ALLOW_HEADERS.push("x-requested-with");
-ALLOW_HEADERS.push("x-forwarded-for");
-ALLOW_HEADERS.push("x-real-ip");
-ALLOW_HEADERS.push("x-customheader");
-ALLOW_HEADERS.push("user-agent");
-ALLOW_HEADERS.push("keep-alive");
-ALLOW_HEADERS.push("host");
-ALLOW_HEADERS.push("accept");
-ALLOW_HEADERS.push("connection");
-ALLOW_HEADERS.push("upgrade");
-ALLOW_HEADERS.push("content-type");
-ALLOW_HEADERS.push("dnt"); // Do not track
-ALLOW_HEADERS.push("if-modified-since");
-ALLOW_HEADERS.push("cache-control");
+ALLOW_HEADERS.push('authorization');
+ALLOW_HEADERS.push('withcredentials');
+ALLOW_HEADERS.push('x-requested-with');
+ALLOW_HEADERS.push('x-forwarded-for');
+ALLOW_HEADERS.push('x-real-ip');
+ALLOW_HEADERS.push('x-customheader');
+ALLOW_HEADERS.push('user-agent');
+ALLOW_HEADERS.push('keep-alive');
+ALLOW_HEADERS.push('host');
+ALLOW_HEADERS.push('accept');
+ALLOW_HEADERS.push('connection');
+ALLOW_HEADERS.push('upgrade');
+ALLOW_HEADERS.push('content-type');
+ALLOW_HEADERS.push('dnt'); // Do not track
+ALLOW_HEADERS.push('if-modified-since');
+ALLOW_HEADERS.push('cache-control');
 
 // Manually implement the method not allowed handler to fix failing preflights
 //
-server.on("MethodNotAllowed", function (request, response) {
-  if (request.method.toUpperCase() === "OPTIONS") {
+server.on('MethodNotAllowed', function(request, response) {
+  if (request.method.toUpperCase() === 'OPTIONS') {
     // Send the CORS headers
     //
-    response.header("Access-Control-Allow-Credentials", true);
-    response.header("Access-Control-Allow-Headers", ALLOW_HEADERS.join(", "));
-    response.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    response.header("Access-Control-Allow-Origin", request.headers.origin);
-    response.header("Access-Control-Max-Age", 0);
-    response.header("Content-type", "application/json charset=UTF-8");
-    response.header("Content-length", 0);
+    response.header('Access-Control-Allow-Credentials', true);
+    response.header('Access-Control-Allow-Headers', ALLOW_HEADERS.join(', '));
+    response.header(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PUT, DELETE, OPTIONS'
+    );
+    response.header('Access-Control-Allow-Origin', request.headers.origin);
+    response.header('Access-Control-Max-Age', 0);
+    response.header('Content-type', 'application/json charset=UTF-8');
+    response.header('Content-length', 0);
 
     response.send(204);
   } else {
@@ -73,24 +78,46 @@ server.on("MethodNotAllowed", function (request, response) {
   }
 });
 //指定根路由返回内容
-server.get('/', function (req, res, next) {
+server.get('/', function(req, res, next) {
   res.send('Hello BatchPrint!');
   return next();
 });
-// testing the service  
-server.get('/test', function (req, res, next) {
-  res.send("testing...");
+// testing the service
+server.get('/test', function(req, res, next) {
+  res.send('testing...');
   next();
 });
-
+server.get(
+  '/pdffiles/:filename',
+  function(req,res,next){
+    res.header('Content-Disposition','attachment; filename='+req.params)
+    return next(next=>
+     restify.plugins.serveStatic({
+       directory: __dirname,
+       default: 'index.html',
+       file: '123'
+     }))
+  }
+ 
+);
 //指定Route
 PATH = '/print';
 //指定相应Route的方法
-server.post({
-  path: PATH,
-  version: '0.0.1'
-}, postNewPrintJob);
+server.post(
+  {
+    path: PATH,
+    version: '0.0.1'
+  },
+  postNewPrintJob
+);
 
+let Duplex = require('stream').Duplex;
+function bufferToStream(buffer) {
+  let stream = new Duplex();
+  stream.push(buffer);
+  stream.push(null);
+  return stream;
+}
 
 function postNewPrintJob(req, res, next) {
   console.log(req.body);
@@ -98,11 +125,11 @@ function postNewPrintJob(req, res, next) {
   var joblist = req.body;
 
   if (!joblist) return;
-  if(joblist.length==1){
-    
+  console.log(joblist.length);
+  if (joblist.length == 1) {
     const job = joblist[0];
-  
-    (async() => {
+
+    (async () => {
       //启动Chrome
       const browser = await puppeteer.launch();
       //新建Page
@@ -127,48 +154,46 @@ function postNewPrintJob(req, res, next) {
       });
       //关闭浏览器。
       browser.close();
-     console.log(typeof(pdffile));
+      //设置跨域响应
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      // if (pdffile) {
+      //   //返回结果。
+      //   res.send(200, pdffile);
+      //   return next();
+      // }
+      const stream = bufferToStream(pdffile);
+      res.header('Content-Type','application/octet-stream')
+      res.send(200, stream);
     })();
-
-    
   }
-  joblist.forEach(job => {
-    (async() => {
-      //启动Chrome
-      const browser = await puppeteer.launch();
-      //新建Page
-      const page = await browser.newPage();
+  else
+  {
+    joblist.forEach(job => {
+      (async () => {
+        //启动Chrome
+        const browser = await puppeteer.launch();
+        //新建Page
+        const page = await browser.newPage();
 
-      //打开页面 load方式指页面所有事务执行完毕
-      await page.goto(job.printpage , {
-        waitUntil: 'load'
-      });
-      //指定响应Media为Print
-      await page.emulateMedia('print');
-      //生成PDF文件，format设为A4,margin为默认页边距。
-      const pdffile = await page.pdf({
-        path: pdffiledirectory + '/' + job.docname+'.pdf',
-        format: 'A4',
-        margin: {
-          top: '10mm',
-          bottom: '10mm',
-          left: '10mm',
-          right: '10mm'
-        }
-      });
-      //关闭浏览器。
-      browser.close();
-    })();
-  });
-  //设置跨域响应
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  // if (pdffile) {
-  //   //返回结果。
-  //   res.send(200, pdffile);
-  //   return next();
-  // }
-  res.send(200,'Success');
+        //打开页面 load方式指页面所有事务执行完毕
+        await page.goto(job.printpage, { waitUntil: 'load' });
+        //指定响应Media为Print
+        await page.emulateMedia('print');
+        //生成PDF文件，format设为A4,margin为默认页边距。
+        const pdffile = await page.pdf({
+          path: pdffiledirectory + '/' + job.docname + '.pdf',
+          format: 'A4',
+          margin: {
+            top: '10mm',
+            bottom: '10mm',
+            left: '10mm',
+            right: '10mm'
+          }
+        });
+        //关闭浏览器。
+        browser.close();
+      })();
+    });
+  }
   return next();
-
-
 }

@@ -184,5 +184,5 @@ pupeteer会下载一个特别的Chrome浏览器到你的项目中，大概120MB�
 
 点击Send后，在我们Server的目录中会生成一个PDF文档。打开后就可以看到指定网页的内容。
 
-Feature 0.1
+
 
