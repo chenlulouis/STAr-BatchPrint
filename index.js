@@ -1,6 +1,7 @@
 // 引入puppeteer和restify
 const puppeteer = require('puppeteer');
 const restify = require('restify');
+var path = require('path');
 const fs = require('fs');
 const merge = require('easy-pdf-merge');
 const pdfinputdirectory = 'PDFSingleFiles';
@@ -107,7 +108,14 @@ server.get('/test', function(req, res, next) {
   res.send('testing...');
   next();
 });
-
+server.get(
+  /\/download\/?.*/,
+  restify.plugins.serveStatic({
+    directory: './pdffiles/',
+    default: 'index.html',
+    appendRequestPath: false
+  })
+);
 //指定Route
 PATH = '/print';
 //指定相应Route的方法
@@ -139,7 +147,7 @@ function postNewPrintJob(req, res, next) {
       //打开页面 load方式指页面所有事务执行完毕
       await page.goto(printjobs[i].printpage, {
         waitUntil: 'networkidle',
-        networkIdleInflight: 30,
+
         networkIdleTimeout: 20000
       });
 
@@ -168,7 +176,7 @@ function postNewPrintJob(req, res, next) {
       });
     }
     //关闭浏览器。
-    browser.close();
+    await browser.close();
     console.info('---export to pdf end -----');
     console.log(filelist);
     let tomergefiles = [];
@@ -180,17 +188,16 @@ function postNewPrintJob(req, res, next) {
       __dirname + '\\' + pdfoutputdirectory + '\\' + currentjobid + '.pdf';
     if (tomergefiles.length < 2) {
       if (tomergefiles.length === 1) {
-        var fileName = 'single.pdf'; //req.params.fileName;
-        var filePath = tomergefiles[0];
+        var readStream = fs.createReadStream(tomergefiles[0]);
+
+        var writeStream = fs.createWriteStream(outputfilepath);
+        readStream.pipe(writeStream);
+        var fileName = currentjobid + '.pdf'; //req.params.fileName;
+        var filePath = outputfilepath;
         var stats = fs.statSync(filePath);
         if (stats.isFile()) {
-          res.set({
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': 'attachment; inline; filename=' + fileName,
-            'Content-Length': stats.size
-          });
-
-          fs.createReadStream(filePath).pipe(res);
+          var downloadlink = `http://${ip_addr}:${port}/download/${fileName}`;
+          res.send(200, downloadlink);
         } else {
           res.end(404);
         }
@@ -199,22 +206,17 @@ function postNewPrintJob(req, res, next) {
       merge(tomergefiles, outputfilepath, function(err) {
         if (err) return console.log(err);
         console.log('Successfully merged!');
-        var fileName = '12312313.pdf'; //req.params.fileName;
+
+        var fileName = currentjobid + '.pdf'; //req.params.fileName;
         var filePath = outputfilepath;
         var stats = fs.statSync(filePath);
         if (stats.isFile()) {
-          res.set({
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': 'attachment; inline; filename=' + fileName,
-            'Content-Length': stats.size
-          });
-        
-          fs.createReadStream(filePath).pipe(res);
+          var downloadlink = `http://${ip_addr}:${port}/download/${fileName}`;
+          res.send(200, downloadlink);
         } else {
           res.end(404);
         }
       });
     }
-    // 实现文件下载
   });
 }
