@@ -17,7 +17,10 @@
   },
   "homepage": "https://github.com/zhangwei8387/STAr-BatchPrint#readme",
   "dependencies": {
+    "easy-pdf-merge": "^0.1.3",
     "eslint": "^4.6.1",
+    "moment": "^2.18.1",
+    "node-uuid": "^1.4.8",
     "puppeteer": "^0.10.2",
     "restify": "^5.2.0"
   }

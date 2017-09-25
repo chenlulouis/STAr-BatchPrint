@@ -1,11 +1,16 @@
 // 引入puppeteer和restify
 const puppeteer = require('puppeteer');
 const restify = require('restify');
-
+const fs = require('fs');
+const merge = require('easy-pdf-merge');
+const pdfinputdirectory = 'PDFSingleFiles';
+const pdfoutputdirectory = 'pdffiles';
+const pdffiledirectory = __dirname + '\\' + pdfinputdirectory;
+const uuid = require('node-uuid');
+let outputfilepath = '';
 //指定Server的IP地址和端口
-const ip_addr = '192.168.3.2';
+const ip_addr = '127.0.0.1';
 const port = '8080';
-const pdffiledirectory = 'pdffiles';
 
 //启动Server
 var server = restify.createServer({
@@ -57,8 +62,23 @@ ALLOW_HEADERS.push('cache-control');
 
 // Manually implement the method not allowed handler to fix failing preflights
 //
+
+server.use(function crossOrigin(req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Connection,Origin,Accept,X-Requested-With,content-type'
+  );
+  return next();
+});
 server.on('MethodNotAllowed', function(request, response) {
-  if (request.method.toUpperCase() === 'OPTIONS') {
+  if (
+    request.method.toUpperCase() === 'OPTIONS' ||
+    'POST' ||
+    'GET' ||
+    'DELETE' ||
+    'PUT'
+  ) {
     // Send the CORS headers
     //
     response.header('Access-Control-Allow-Credentials', true);
@@ -87,19 +107,7 @@ server.get('/test', function(req, res, next) {
   res.send('testing...');
   next();
 });
-server.get(
-  '/pdffiles/:filename',
-  function(req,res,next){
-    res.header('Content-Disposition','attachment; filename='+req.params)
-    return next(next=>
-     restify.plugins.serveStatic({
-       directory: __dirname,
-       default: 'index.html',
-       file: '123'
-     }))
-  }
- 
-);
+
 //指定Route
 PATH = '/print';
 //指定相应Route的方法
@@ -111,39 +119,35 @@ server.post(
   postNewPrintJob
 );
 
-let Duplex = require('stream').Duplex;
-function bufferToStream(buffer) {
-  let stream = new Duplex();
-  stream.push(buffer);
-  stream.push(null);
-  return stream;
-}
-
 function postNewPrintJob(req, res, next) {
-  console.log(req.body);
+  const printjobs = req.body;
 
-  var joblist = req.body;
+  if (printjobs == null || printjobs == undefined || printjobs.length <= 0)
+    return;
+  var singlefiles = [];
+  puppeteer.launch().then(async browser => {
+    console.info('---export to pdf start at %s-----', new Date());
+    console.info('---file count:%s', printjobs.length);
+    var currentjobid = uuid.v4();
+    const currentjobdirectory = pdffiledirectory + '\\' + currentjobid;
+    fs.mkdirSync(currentjobdirectory);
 
-  if (!joblist) return;
-  console.log(joblist.length);
-  if (joblist.length == 1) {
-    const job = joblist[0];
-
-    (async () => {
-      //启动Chrome
-      const browser = await puppeteer.launch();
+    let filelist = [];
+    for (let i = 0; i < printjobs.length; i++) {
       //新建Page
       const page = await browser.newPage();
-
       //打开页面 load方式指页面所有事务执行完毕
-      await page.goto(job.printpage, {
-        waitUntil: 'load'
+      await page.goto(printjobs[i].printpage, {
+        waitUntil: 'networkidle',
+        networkIdleInflight: 30,
+        networkIdleTimeout: 20000
       });
+
       //指定响应Media为Print
       await page.emulateMedia('print');
       //生成PDF文件，format设为A4,margin为默认页边距。
-      const pdffile = await page.pdf({
-        path: pdffiledirectory + '/' + job.docname + '.pdf',
+      const filebuffer = await page.pdf({
+        path: currentjobdirectory + '\\' + printjobs[i].docname + '.pdf',
         format: 'A4',
         margin: {
           top: '10mm',
@@ -152,48 +156,65 @@ function postNewPrintJob(req, res, next) {
           right: '10mm'
         }
       });
-      //关闭浏览器。
-      browser.close();
-      //设置跨域响应
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      // if (pdffile) {
-      //   //返回结果。
-      //   res.send(200, pdffile);
-      //   return next();
-      // }
-      const stream = bufferToStream(pdffile);
-      res.header('Content-Type','application/octet-stream')
-      res.send(200, stream);
-    })();
-  }
-  else
-  {
-    joblist.forEach(job => {
-      (async () => {
-        //启动Chrome
-        const browser = await puppeteer.launch();
-        //新建Page
-        const page = await browser.newPage();
-
-        //打开页面 load方式指页面所有事务执行完毕
-        await page.goto(job.printpage, { waitUntil: 'load' });
-        //指定响应Media为Print
-        await page.emulateMedia('print');
-        //生成PDF文件，format设为A4,margin为默认页边距。
-        const pdffile = await page.pdf({
-          path: pdffiledirectory + '/' + job.docname + '.pdf',
-          format: 'A4',
-          margin: {
-            top: '10mm',
-            bottom: '10mm',
-            left: '10mm',
-            right: '10mm'
-          }
-        });
-        //关闭浏览器。
-        browser.close();
-      })();
+      console.info(
+        '---file %s was finished at %s---',
+        printjobs[i].docname + '.pdf',
+        new Date()
+      );
+      filelist.push({
+        index: i,
+        filename: printjobs[i].docname + '.pdf',
+        path: currentjobdirectory + '\\' + printjobs[i].docname + '.pdf'
+      });
+    }
+    //关闭浏览器。
+    browser.close();
+    console.info('---export to pdf end -----');
+    console.log(filelist);
+    let tomergefiles = [];
+    fs.readdirSync(currentjobdirectory).forEach(file => {
+      tomergefiles.push(currentjobdirectory + '\\' + file);
     });
-  }
-  return next();
+    console.log(tomergefiles);
+    outputfilepath =
+      __dirname + '\\' + pdfoutputdirectory + '\\' + currentjobid + '.pdf';
+    if (tomergefiles.length < 2) {
+      if (tomergefiles.length === 1) {
+        var fileName = 'single.pdf'; //req.params.fileName;
+        var filePath = tomergefiles[0];
+        var stats = fs.statSync(filePath);
+        if (stats.isFile()) {
+          res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; inline; filename=' + fileName,
+            'Content-Length': stats.size
+          });
+
+          fs.createReadStream(filePath).pipe(res);
+        } else {
+          res.end(404);
+        }
+      }
+    } else {
+      merge(tomergefiles, outputfilepath, function(err) {
+        if (err) return console.log(err);
+        console.log('Successfully merged!');
+        var fileName = '12312313.pdf'; //req.params.fileName;
+        var filePath = outputfilepath;
+        var stats = fs.statSync(filePath);
+        if (stats.isFile()) {
+          res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; inline; filename=' + fileName,
+            'Content-Length': stats.size
+          });
+        
+          fs.createReadStream(filePath).pipe(res);
+        } else {
+          res.end(404);
+        }
+      });
+    }
+    // 实现文件下载
+  });
 }
