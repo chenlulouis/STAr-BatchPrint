@@ -19,7 +19,7 @@ var server = restify.createServer({
 });
 
 //启动服务端监听
-server.listen(port, ip_addr, function() {
+server.listen(port, ip_addr, function () {
   console.log('%s listening at %s ', server.name, server.url);
 });
 
@@ -72,7 +72,7 @@ server.use(function crossOrigin(req, res, next) {
   );
   return next();
 });
-server.on('MethodNotAllowed', function(request, response) {
+server.on('MethodNotAllowed', function (request, response) {
   if (
     request.method.toUpperCase() === 'OPTIONS' ||
     'POST' ||
@@ -99,15 +99,59 @@ server.on('MethodNotAllowed', function(request, response) {
   }
 });
 //指定根路由返回内容
-server.get('/', function(req, res, next) {
+server.get('/', function (req, res, next) {
   res.send('Hello BatchPrint!');
   return next();
 });
 // testing the service
-server.get('/test', function(req, res, next) {
-  res.send('testing...');
+server.post('/test', testhello);
+
+
+async function testhello(req, res, next) {
+  const postdata = JSON.parse(req.body);
+  console.log(postdata.length);
+  const jobs = postdata;
+  await jobs.forEach(async job => {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.goto(job.printpage, {
+      waitUntil: 'networkidle',
+
+      networkIdleTimeout: 20000
+    })
+    await page.pdf({
+      path: __dirname + '\\pdffiles\\' + job.docname + jobs.indexOf(job) + '.pdf',
+      format: 'A4',
+      margin: {
+        top: '10mm',
+        bottom: '10mm',
+        left: '10mm',
+        right: '10mm'
+      }
+    });
+    await browser.close();
+    console.log(job.printpage + job.docname);
+  });
+  await console.info('foreach pdf end!');
+  // let filelist=[];
+  // fs.watch(__dirname + '\\pdffiles\\', {
+  //       persistent: false, // 设为false时，不会阻塞进程。
+  //       recursive: false
+  //     }, (eventType, filename) => {
+  //  if(eventType==='change'){
+  //      if (filename) {
+  //         filelist.push({
+  //           filename: filename,
+  //         })
+  //      } else {
+  //        console.log('未提供文件名');
+  //      }
+  //   }
+  //   console.log(filelist);
+  // });
   next();
-});
+
+}
 server.get(
   /\/download\/?.*/,
   restify.plugins.serveStatic({
@@ -119,13 +163,14 @@ server.get(
 //指定Route
 PATH = '/print';
 //指定相应Route的方法
-server.post(
-  {
+server.post({
     path: PATH,
     version: '0.0.1'
   },
   postNewPrintJob
 );
+
+
 
 function postNewPrintJob(req, res, next) {
   const printjobs = req.body;
@@ -203,7 +248,7 @@ function postNewPrintJob(req, res, next) {
         }
       }
     } else {
-      merge(tomergefiles, outputfilepath, function(err) {
+      merge(tomergefiles, outputfilepath, function (err) {
         if (err) return console.log(err);
         console.log('Successfully merged!');
 
